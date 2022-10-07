@@ -1,0 +1,123 @@
+---
+title: "House price prediction"
+author: "Vishnukant Shukla"
+date: "2022-08-06"
+output: html_document
+---
+```{r warning=FALSE}
+library(MASS) 
+library(caret)
+library(car)
+library(corrplot)
+library(olsrr)
+library(moments)
+```
+
+
+```{r}
+# Importing the data and checking for missing values
+
+housing = read.csv("C:/Users/VISHNUKANT SHUKLA/Desktop/Housing project/housing.csv")
+#View(housing)
+Data=data.frame(housing)
+summary(Data)
+table(is.na(Data))
+
+```
+
+```{r}
+# some basic EDA
+
+par(mfrow=c(1,4))
+boxplot(Data$crim, main='crim',col='Sky Blue')
+boxplot(Data$zn, main='zn',col='Sky Blue')
+boxplot(Data$indus, main='indus',col='Sky Blue')
+boxplot(Data$chas, main='chas',col='Sky Blue')
+
+
+par(mfrow=c(1,4))
+boxplot(Data$nox, main='nox',col='Sky Blue')
+boxplot(Data$rm,main='rm',col='sky Blue')
+boxplot(Data$age,main='age',col='sky Blue')
+boxplot(Data$dis,main='dis',col='sky Blue')
+
+
+par(mfrow=c(1,4))
+boxplot(Data$rad,main='rad',col='sky Blue')
+boxplot(Data$tax,main='tax',col='sky Blue')
+boxplot(Data$ptratio,main='ptratio',col='sky Blue')
+boxplot(Data$b,main='b',col='sky Blue')
+
+
+par(mfrow=c(1,4))
+boxplot(Data$lstat,main='lstat',col='sky Blue')
+boxplot(Data$medv,main='medv',col='sky Blue')
+
+par(mfrow=c(1,1))
+library(corrplot)
+corrplot(cor(Data))
+
+```
+
+
+```{r}
+#Box-Cox Transformation for making response variable approximately normal
+attach(Data)
+y=Data$medv
+BoxCoxTrans(y)  
+#lambda=0.2 approx as 0
+y_=log(y)
+hist(y_,ylab = "Frequency", xlab="medv", breaks=20,main="Histogram of medv values")
+qqnorm(y_)
+skewness(y_)
+```
+
+
+```{r}
+b1=data.frame(cbind(y_,Data[,-14]))
+chas_=as.factor(chas)
+model=lm(y_~crim+zn+indus+chas_+nox+rm+age+dis+rad+tax+ptratio+b+lstat,Data=b1)
+summary(model)
+
+#bd_model = ols_step_backward_p(model)
+#ols_step_backward_p(model,0.05,details = TRUE)
+
+#plot(bd_model)  #age and indus eliminated
+model1=lm(y_~crim+zn+chas_+nox+rm+dis+rad+tax+ptratio+b+lstat,Data=b1)
+summary(model1)
+```
+
+```{r}
+#VIF Calculation
+vif(model1)   #high vif values for rad and tax
+cor(b1)  
+#drop tax
+
+model2=lm(y_~crim+zn+chas_+nox+rm+dis+rad+ptratio+b+lstat,Data=b1)
+#summary(model2)
+vif(model2)
+
+
+plot(model2)
+summary(model2)
+
+```
+
+```{r}
+# To test for autocorrelation/independent among residuals.
+durbinWatsonTest(model2)
+
+```
+
+```{r}
+#homoscedasticity
+#install.packages("lmtest")
+library(lmtest)
+bptest(model2)
+
+
+summary(model2)
+confint(model2)
+
+```
+
